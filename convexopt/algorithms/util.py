@@ -31,6 +31,6 @@ class Logger(object):
 
     def __call__(self, x):
         self.objectives.append(self.objective(x)
-                              if self.objective is not None else float("nan"))
+                               if self.objective is not None else float("nan"))
         self.errors.append(_np.linalg.norm(x.ravel() - self.true_x.ravel())
                            if self.true_x is not None else float("nan"))
