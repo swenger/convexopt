@@ -92,7 +92,7 @@ class Operator(object):
 
         Returns
         -------
-        `np.ndarray`
+        np.ndarray
             An array of length self.shape[0].
 
         Raises
@@ -115,7 +115,7 @@ class Operator(object):
 
         Returns
         -------
-        `np.ndarray`
+        np.ndarray
             An array of length self.shape[0].
 
         Raises
@@ -138,7 +138,7 @@ class Operator(object):
 
         Returns
         -------
-        `np.ndarray`
+        np.ndarray
             An array of length self.shape[1].
 
         Raises
