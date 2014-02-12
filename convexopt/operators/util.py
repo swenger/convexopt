@@ -55,27 +55,27 @@ class Operator(object):
     """
 
     shape = (None, None)
-    """Lengths of input and output vectors.
+    """Lengths of input and output vectors
 
     May be `None` to indicate that any length is accepted.
     """
 
     lipschitz = None
-    """Lipschitz constant.
+    """Lipschitz constant
 
     May be `None` to indicate that the operator is not Lipschitz continuous, or
     that the Lipschitz constant cannot be computed efficiently.
     """
 
     gradient = None
-    """Gradient operator.
+    """Gradient operator
 
     May be `None` to indicate that the operator is not differentiable, or that
     no efficient implementation of the gradient operator is available.
     """
 
     conjugate = None
-    """Convex conjugate.
+    """Convex conjugate
 
     May be `None` to indicate that the convex conjugate is undefined (for
     example, because the operator does not map to a scalar field), or that no
@@ -174,7 +174,7 @@ class Operator(object):
 
 
 class OperatorSum(Operator):
-    """The sum of multiple operators.
+    """The sum of multiple operators
 
     Parameters
     ----------
@@ -216,7 +216,7 @@ class OperatorSum(Operator):
 
 
 class ScaledOperator(Operator):
-    """A scalar multiple of an operator.
+    """A scalar multiple of an operator
 
     Parameters
     ----------
