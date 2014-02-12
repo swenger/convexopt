@@ -47,9 +47,10 @@ class Operator(object):
             argnames = arg.args[1:]
             if arg.varargs is not None:
                 argnames.append(arg.varargs)
-        return "%s(%s)" % (type(self).__name__,
-                           ", ".join("%s=%r" % (key, getattr(self, key))
-                                     for key in argnames if hasattr(self, key)))
+        return "%s(%s)" % (
+            type(self).__name__,
+            ", ".join("%s=%r" % (key, getattr(self, key))
+                      for key in argnames if hasattr(self, key)))
 
 
 class OperatorSum(Operator):
@@ -73,13 +74,17 @@ class OperatorSum(Operator):
             self.gradient = OperatorSum(*[op.gradient for op in ops])
 
     def __call__(self, x):
+        # (A + B)(x) = A(x) + B(x)
         return sum(op(x) for op in self.ops)
 
     def forward(self, x, tau):
+        # (1 - tau (A + B))(x) = x - tau (A(x) + B(x))
         return x - tau * sum(op(x) for op in self.ops)
 
     def backward(self, x, tau):
-        raise NotImplementedError  # TODO
+        # (1 + tau (A + B))^-1(x) cannot easily be computed
+        # from (1 + tau A)^-1(x) and (1 + tau B)^-1(x)
+        raise NotImplementedError
 
 
 class ScaledOperator(Operator):
@@ -91,10 +96,13 @@ class ScaledOperator(Operator):
             self.gradient = ScaledOperator(op.gradient, a)
 
     def __call__(self, x):
+        # (a A)(x) = a A(x)
         return self.a * self.op(x)
 
     def forward(self, x, tau):
+        # (1 - tau (a A))(x) = (1 - (tau a) A)(x)
         return self.op.forward(x, self.a * tau)
 
     def backward(self, x, tau):
+        # (1 + tau (a A))^-1(x) = (1 + (tau a) A)^-1(x)
         return self.op.backward(x, self.a * tau)

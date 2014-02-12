@@ -1,0 +1,6 @@
+TODO
+----
+
+- stacked and reshaped operators
+- inspection to find out what methods are implemented
+
