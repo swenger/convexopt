@@ -1,4 +1,4 @@
-"""Base classes and utilities for operators.
+"""Base classes and utilities for operators
 """
 
 from inspect import getargspec as _getargspec
@@ -26,7 +26,6 @@ def squared_operator_norm(A, niter=100):
 
     Examples
     --------
-    >>> import numpy as np
     >>> from scipy.sparse.linalg import aslinearoperator
     >>> squared_operator_norm(aslinearoperator(np.eye(3)))
     1.0

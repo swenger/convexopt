@@ -1,3 +1,6 @@
+"""Data term :math:`\\frac{1}{2} \\Vert A x - b \\Vert_2^2`
+"""
+
 import numpy as _np
 
 from convexopt.operators.util import Operator, squared_operator_norm
@@ -6,6 +9,15 @@ __all__ = ["DataTerm"]
 
 
 class DataTermGradient(Operator):
+    """Gradient of 0.5 ||A x - b||_2^2
+
+    The Lipschitz constant of the gradient A^T (A x - b) is computed by power
+    iteration, which can take a while.
+
+    The backward operator requires inversion of a matrix, which is also rather
+    slow.
+    """
+
     def __init__(self, A, b):
         super(DataTermGradient, self).__init__()
         if A.shape[:1] != b.shape:
@@ -40,7 +52,7 @@ class DataTermGradient(Operator):
 
 
 class DataTerm(Operator):
-    """0.5 || A x - b ||_2^2"""
+    """0.5 ||A x - b||_2^2"""
 
     def __init__(self, A, b):
         super(DataTerm, self).__init__()

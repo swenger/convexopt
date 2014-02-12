@@ -29,6 +29,6 @@ if __name__ == "__main__":
     # plot convergence
     import pylab
     pylab.loglog(log.errors, label="error")
-    pylab.loglog(log.residuals, label="residual")
+    pylab.loglog(log.objectives, label="residual")
     pylab.legend()
     pylab.show()
