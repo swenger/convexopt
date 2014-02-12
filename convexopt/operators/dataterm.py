@@ -44,4 +44,4 @@ class DataTerm(Operator):
 
     @property
     def shape(self):
-        return (1, self.A.shape[1])
+        return (0, self.A.shape[1])

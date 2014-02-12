@@ -13,7 +13,7 @@ class L1NormGradient(Operator):
 class L1Norm(Operator):
     """|| x ||_1"""
 
-    shape = (1, None)
+    shape = (0, None)
     gradient = L1NormGradient()
 
     def __call__(self, x):
