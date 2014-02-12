@@ -3,4 +3,8 @@ TODO
 
 - stacked and reshaped operators
 - inspection to find out what methods are implemented
-
+- automatically apply the Moreau decomposition:
+  x = prox_f(x) + prox_f*(x)
+  => x = f.gradient.backward(x) + f.conjugate.gradient.backward(x)
+  => If f.gradient or f.gradient.backward are not implemented, try
+     f.conjugate.gradient.backward instead.

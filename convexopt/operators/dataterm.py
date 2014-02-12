@@ -27,6 +27,17 @@ class DataTermGradient(Operator):
             self._lipschitz = squared_operator_norm(self.A)
         return self._lipschitz
 
+    def backward(self, x, tau):
+        # (1 + tau A^T A)^-1(x + tau A^T b)
+        from scipy.sparse.linalg import lsqr, LinearOperator
+
+        def matvec(y):
+            return y + tau * self.A.rmatvec(self.A.matvec(y))
+        x, istop, itn, r1norm, r2norm, anorm, acond, arnorm, xnorm, var = \
+            lsqr(LinearOperator(matvec, matvec),
+                 x + tau * self.A.rmatvec(self.b))
+        return x
+
 
 class DataTerm(Operator):
     """0.5 || A x - b ||_2^2"""

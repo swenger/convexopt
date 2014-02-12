@@ -1,10 +1,4 @@
 """Base classes and utilities for operators.
-
-TODO automatically apply the Moreau decomposition:
-    x = prox_f(x) + prox_f*(x)
-    => x = f.gradient.backward(x) + f.conjugate.gradient.backward(x)
-    => If f.gradient or f.gradient.backward are not implemented, try
-       f.conjugate.gradient.backward instead.
 """
 
 from inspect import getargspec as _getargspec
@@ -76,7 +70,7 @@ class Operator(object):
 
     gradient = None
     """Gradient operator.
-    
+
     May be `None` to indicate that the operator is not differentiable, or that
     no efficient implementation of the gradient operator is available.
     """
@@ -153,7 +147,7 @@ class Operator(object):
         NotImplementedError
             If the operator does not implement a backward operator.
         """
-        
+
         raise NotImplementedError
 
     def __mul__(self, a):
