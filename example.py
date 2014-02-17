@@ -1,6 +1,7 @@
 import numpy as np
 
 from convexopt.algorithms.forwardbackward import ForwardBackward
+from convexopt.algorithms.util import ObjectiveLogger, ErrorLogger
 from convexopt.operators import L1Norm, DataTerm
 
 if __name__ == "__main__":
@@ -22,15 +23,15 @@ if __name__ == "__main__":
 
     # solve
     
-    # xr = ForwardBackward.run(l1, l2, niter=10000, objective=l1+l2, true_x=x)
-    
-    alg = ForwardBackward(l1, l2, niter=10000, objective=l1+l2, true_x=x)
+    alg = ForwardBackward(l1, l2, maxiter=10000, objectives=ObjectiveLogger(l1 + l2), errors=ErrorLogger(x))
     alg.run()
     xr = alg.x
     print "reasons for stopping: " + ", ".join(message for cls, message in alg.stopping_reasons)
-
     np.testing.assert_array_almost_equal(x, xr, decimal=3)
 
+    xr2 = ForwardBackward.run(l1, l2, maxiter=10000)
+    np.testing.assert_array_equal(xr, xr2)
+    
     # plot convergence
     import pylab
     pylab.loglog(alg.errors, label="error")

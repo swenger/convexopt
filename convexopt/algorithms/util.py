@@ -6,15 +6,7 @@ import numpy as _np
 
 class Callback(object):
     """Base class for callback objects to determine algorithm convergence
-
-    Parameters
-    ----------
-    alg : `Algorithm`
-        Algorithm object that uses this callback.
     """
-
-    def __init__(self, alg):
-        self.alg = alg
 
     def __call__(self):
         """Called from within `Algorithm.run` to determine convergence
@@ -33,71 +25,73 @@ class StepLimiter(Callback):
 
     Parameters
     ----------
-    alg : `Algorithm`
-        Algorithm object that uses this callback.
-    niter : int
+    maxiter : int
         Maximum number of steps.
     """
 
-    def __init__(self, alg, niter):
-        super(StepLimiter, self).__init__(alg)
+    def __init__(self, maxiter):
+        super(StepLimiter, self).__init__()
         self.step = 0
-        self.niter = niter
+        self.maxiter = maxiter
 
-    def __call__(self):
+    def __call__(self, x):
         self.step += 1
-        if self.step >= self.niter:
-            return "maximum number of iterations reached (%d)" % self.niter
+        if self.step >= self.maxiter:
+            return "maximum number of iterations reached (%d)" % self.maxiter
 
 
-class ErrorLogger(Callback):
-    """Log reconstruction errors for each time step
-
-    An additional attribute `errors` in the algorithm will contain the logged
-    values.
-
-    Parameters
-    ----------
-    alg : `Algorithm`
-        Algorithm object that uses this callback.
-    true_x : `np.ndarray`, optional
-        The true optimum, if known, to compute the reconstruction error.
+class Logger(list):
+    """Base class for logger objects to log algorithm convergence
     """
 
-    def __init__(self, alg, true_x=None):
-        super(ErrorLogger, self).__init__(alg)
-        self.true_x = true_x
-        alg.errors = []
+    def __call__(self, x):
+        """Log status for a new iterate
+        """
 
-    def __call__(self):
-        self.alg.errors.append(
-            _np.linalg.norm(self.alg.x.ravel() - self.true_x.ravel())
-            if self.true_x is not None else float("nan"))
+        self.append(self.value(x))
+
+    def value(self, x):
+        """Compute status for a new iterate
+        """
+
+        raise NotImplementedError
+
+    def __eq__(self, obj):
+        return self is obj
+
+    def __hash__(self):
+        return id(self)
 
 
-class ObjectiveLogger(Callback):
-    """Log objective function values for each time step
-
-    An additional attribute `objectives` in the algorithm will contain the
-    logged values.
+class ErrorLogger(Logger):
+    """Log reconstruction errors for each time step
 
     Parameters
     ----------
-    alg : `Algorithm`
-        Algorithm object that uses this callback.
-    objective : `Operator`, optional
+    true_x : `np.ndarray`
+        The true optimum to compute the reconstruction error.
+    """
+
+    def __init__(self, true_x):
+        super(ErrorLogger, self).__init__()
+        self.true_x = true_x
+
+    def value(self, x):
+        return _np.linalg.norm(x.ravel() - self.true_x.ravel())
+
+
+class ObjectiveLogger(Logger):
+    """Log objective function values for each time step
+
+    Parameters
+    ----------
+    objective : `Operator`
         A function to evaluate the objective function value.
     """
 
-    def __init__(self, alg, objective=None):
-        super(ObjectiveLogger, self).__init__(alg)
-        self.objective = objective
-        alg.objectives = []
-
-    def __call__(self):
-        self.alg.objectives.append(
-            self.objective(self.alg.x)
-            if self.objective is not None else float("nan"))
+    def __init__(self, objective):
+        super(ObjectiveLogger, self).__init__()
+        self.value = objective
 
 
 class _ClassOrInstanceMethod(object):
@@ -112,13 +106,13 @@ class _ClassOrInstanceMethod(object):
             return MethodType(self.func, obj, cls)
 
 
-def _find_subclasses_with_initparams(dct, cls, skip_args=1):
+def _find_subclasses_with_initparams(dct, base_class, skip_args=1):
     import inspect
     import warnings
 
     result = {}
     for cls in dct.values():
-        if not (isinstance(cls, type) and issubclass(cls, Callback)):
+        if not (isinstance(cls, type) and issubclass(cls, base_class)):
             continue
 
         try:
@@ -146,14 +140,17 @@ class Algorithm(object):
 
     Parameters
     ----------
-    callbacks : list of callable, optional
+    callbacks : list of `Callback`, optional
         Each callback is called once in each iteration with the current iterate
         as an argument.  May return a non-zero message to terminate the
         algorithm.
+    loggers : list of `Logger`, optional
+        Additional loggers to call once per iteration.
 
     Additional keyword arguments are passed to appropriate constructors of
     `Callback` subclasses.  These callback instances are then appended to the
-    list of callbacks.
+    list of callbacks.  If the keyword arguments are `Logger` instances, they
+    are instead added as attributes.
 
     Attributes
     ----------
@@ -161,24 +158,46 @@ class Algorithm(object):
         Solution vector.
     stopping_reasons : list of (callback, message)
         The stopping criteria that caused termination.
+
+    When an attribute is set to a `Logger` instance, the logger is
+    automatically called once per iteration.
     """
 
-    _delegate_kwargs = _find_subclasses_with_initparams(globals(), Callback, skip_args=2)
+    _delegate_kwargs = _find_subclasses_with_initparams(globals(), Callback)
 
-    def __init__(self, callbacks=(), **kwargs):
-        self._callbacks = list(callbacks)
+    def __init__(self, callbacks=(), loggers=(), **kwargs):
+        self.callbacks = set(callbacks)
+        self.loggers = set(loggers)
+        self.stopping_reasons = set()
+
         delegates = {}
         for key, value in kwargs.items():
-            delegates.setdefault(self._delegate_kwargs[key], {})[key] = value
-        self._callbacks.extend(k(self, **v) for k, v in delegates.items())
-
-        self.stopping_reasons = []
+            if isinstance(value, Logger):
+                setattr(self, key, value)
+            else:
+                delegates.setdefault(self._delegate_kwargs[key], {})[key] = value
+        self.callbacks.update(k(**v) for k, v in delegates.items())
 
     def step(self):
         """Compute an iteration step and store results in `self.x`
         """
 
         raise NotImplementedError
+
+    def __setattr__(self, key, value):
+        try:
+            self.loggers.remove(getattr(self, key))
+        except (AttributeError, KeyError, TypeError):
+            pass
+        if isinstance(value, Logger):
+            self.loggers.add(value)
+        super(Algorithm, self).__setattr__(key, value)
+
+    def __delattr__(self, key):
+        value = getattr(self, key)
+        if isinstance(value, Logger):
+            self.loggers.remove(value)
+        super(Algorithm, self).__delattr__(key, value)
 
     @_ClassOrInstanceMethod
     def run(cls_or_self, *args, **kwargs):
@@ -195,9 +214,11 @@ class Algorithm(object):
 
         while not self.stopping_reasons:
             self.step()
-            for callback in self._callbacks:
-                message = callback()
+            for logger in self.loggers:
+                logger(self.x)
+            for callback in self.callbacks:
+                message = callback(self.x)
                 if message:
-                    self.stopping_reasons.append((callback, message))
+                    self.stopping_reasons.add((callback, message))
 
         return self.x

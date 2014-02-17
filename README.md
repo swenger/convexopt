@@ -22,3 +22,6 @@ TODO
   => x = f.gradient.backward(x) + f.conjugate.gradient.backward(x)
   => If f.gradient or f.gradient.backward are not implemented, try
      f.conjugate.gradient.backward instead.
+- logging to console using the logging module
+- cached sparse decomposition for DataTerm backward operator
+
