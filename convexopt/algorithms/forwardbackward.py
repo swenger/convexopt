@@ -1,13 +1,11 @@
-"""Forward-backward algorithm for solving A(x) + B(x) = 0
+"""Forward-backward algorithm
 """
 
 import numpy as _np
 
 
-def forward_backward(A, B, niter=100, gamma=1.0, callback=None):
-    """Forward-backward algorithm
-
-    Find a zero of :math:`A(x) + B(x)`.
+def find_root(A, B, niter=100, gamma=1.0, callback=None):
+    """Find a zero of A(x) + B(x) using the forward-backward algorithm
 
     Parameters
     ----------
@@ -44,3 +42,23 @@ def forward_backward(A, B, niter=100, gamma=1.0, callback=None):
                 break
 
     return x
+
+
+def minimize(f, g, *args, **kwargs):
+    """Minimize f(x) + g(x) using the forward-backward algorithm
+
+    `args` and `kwargs` are passed to `find_root`.
+
+    Parameters
+    ----------
+    f : `Operator`
+        An operator whose gradient implements `backward()`.
+    g : `Operator`
+        An operator whose gradient implements `forward()`.
+
+    See also
+    --------
+    find_root : Root finding algorithm used internally.
+    """
+
+    return find_root(f.gradient, g.gradient, *args, **kwargs)

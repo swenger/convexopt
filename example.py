@@ -1,6 +1,6 @@
 import numpy as np
 
-from convexopt.algorithms import forward_backward
+from convexopt.algorithms import forwardbackward
 from convexopt.algorithms.util import Logger
 from convexopt.operators import L1Norm, DataTerm
 
@@ -23,7 +23,7 @@ if __name__ == "__main__":
     log = Logger(l1 + l2, x)
 
     # solve
-    xr = forward_backward(l1.gradient, l2.gradient, niter=10000, callback=log)
+    xr = forwardbackward.minimize(l1, l2, niter=10000, callback=log)
     np.testing.assert_array_almost_equal(x, xr, decimal=3)
 
     # plot convergence
