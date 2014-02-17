@@ -3,62 +3,60 @@
 
 import numpy as _np
 
-
-def find_root(A, B, niter=100, gamma=1.0, callback=None):
-    """Find a zero of A(x) + B(x) using the forward-backward algorithm
-
-    Parameters
-    ----------
-    A : `Operator`
-        An operator that implements `backward()`.
-    B : `Operator`
-        An operator that implements `forward()`.
-    niter : int
-        Number of iterations to perform.
-    gamma : float
-        Relative step size, 0 < `gamma` < 2.
-    callback : callable
-        Called once in each iteration with the current iterate as an argument.
-        May raise `StopIteration` to terminate the algorithm.
-    """
-
-    if A.shape[0] is None:
-        assert B.shape[0] is not None
-        x = _np.zeros(B.shape[0])
-    elif B.shape[0] is None:
-        assert A.shape[0] is not None
-        x = _np.zeros(A.shape[0])
-    else:
-        assert A.shape[0] == B.shape[0]
-        x = _np.zeros(A.shape[0])
-
-    tau = gamma / B.lipschitz
-    for i in range(niter):
-        x = A.backward(B.forward(x, tau), tau)
-        if callback:
-            try:
-                callback(x)
-            except StopIteration:
-                break
-
-    return x
+from convexopt.algorithms.util import Algorithm
 
 
-def minimize(f, g, *args, **kwargs):
+class ForwardBackward(Algorithm):
     """Minimize f(x) + g(x) using the forward-backward algorithm
 
-    `args` and `kwargs` are passed to `find_root`.
+    More generally, find a zero of A(x) + B(x), where A and B are, by default,
+    the gradients of f and g, respectively.
 
     Parameters
     ----------
     f : `Operator`
-        An operator whose gradient implements `backward()`.
+        An operator whose gradient implements `backward()`.  Alternatively, `A`
+        can be given.
     g : `Operator`
-        An operator whose gradient implements `forward()`.
-
-    See also
-    --------
-    find_root : Root finding algorithm used internally.
+        An operator whose gradient implements `forward()`.  Alternatively, `B`
+        can be given.
+    A : `Operator`
+        An operator that implements `backward()`.
+    B : `Operator`
+        An operator that implements `forward()`.
+    callbacks : list of callable
+        Each callback is called once in each iteration with the current iterate
+        as an argument.  May return a non-zero message to terminate the
+        algorithm.
+    gamma : float
+        Relative step size, 0 < `gamma` < 2.
     """
 
-    return find_root(f.gradient, g.gradient, *args, **kwargs)
+    def __init__(self, f=None, g=None, A=None, B=None, gamma=1.0, *args, **kwargs):
+        super(ForwardBackward, self).__init__(*args, **kwargs)
+
+        if (A is None) == (f is None):
+            raise TypeError("must specify either A or f, but not both")
+        if A is None:
+            A = f.gradient
+        if (B is None) == (g is None):
+            raise TypeError("must specify either B or g, but not both")
+        if B is None:
+            B = g.gradient
+
+        if A.shape[0] is None:
+            assert B.shape[0] is not None
+            self.x = _np.zeros(B.shape[0])
+        elif B.shape[0] is None:
+            assert A.shape[0] is not None
+            self.x = _np.zeros(A.shape[0])
+        else:
+            assert A.shape[0] == B.shape[0]
+            self.x = _np.zeros(A.shape[0])
+
+        self._A = A
+        self._B = B
+        self._tau = gamma / B.lipschitz
+
+    def step(self):
+        self.x = self._A.backward(self._B.forward(self.x, self._tau), self._tau)
