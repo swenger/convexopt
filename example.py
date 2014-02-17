@@ -1,7 +1,6 @@
 import numpy as np
 
 from convexopt.algorithms.forwardbackward import ForwardBackward
-from convexopt.algorithms.util import Logger, ErrorPrinter
 from convexopt.operators import L1Norm, DataTerm
 
 if __name__ == "__main__":
@@ -20,13 +19,12 @@ if __name__ == "__main__":
     # setup problem argmin_x 0.5 ||A x - b||_2^2 + ||x||_1
     l1 = 1e-2 * L1Norm()
     l2 = DataTerm(A, b)
-    log = Logger(l1 + l2, x)
 
     # solve
     
-    # xr = ForwardBackward.run(l1, l2, niter=10000, callbacks=[ErrorPrinter(x), log])
+    # xr = ForwardBackward.run(l1, l2, niter=10000, objective=l1+l2, true_x=x)
     
-    alg = ForwardBackward(l1, l2, niter=10000, callbacks=[ErrorPrinter(x), log])
+    alg = ForwardBackward(l1, l2, niter=10000, objective=l1+l2, true_x=x)
     alg.run()
     xr = alg.x
     print "reasons for stopping: " + ", ".join(message for cls, message in alg.stopping_reasons)
@@ -35,7 +33,7 @@ if __name__ == "__main__":
 
     # plot convergence
     import pylab
-    pylab.loglog(log.errors, label="error")
-    pylab.loglog(log.objectives, label="residual")
+    pylab.loglog(alg.errors, label="error")
+    pylab.loglog(alg.objectives, label="residual")
     pylab.legend()
     pylab.show()

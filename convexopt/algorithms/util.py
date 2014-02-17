@@ -5,58 +5,99 @@ import numpy as _np
 
 
 class Callback(object):
-    pass
+    """Base class for callback objects to determine algorithm convergence
 
+    Parameters
+    ----------
+    alg : `Algorithm`
+        Algorithm object that uses this callback.
+    """
 
-class ErrorPrinter(Callback):
-    def __init__(self, true_x):
-        self.true_x = true_x
+    def __init__(self, alg):
+        self.alg = alg
 
-    def __call__(self, obj):
-        print _np.linalg.norm(obj.x.ravel() - self.true_x.ravel())
+    def __call__(self):
+        """Called from within `Algorithm.run` to determine convergence
+
+        Returns
+        -------
+        message : str or None
+            Reason for termination, or `None` if not yet converged
+        """
+
+        raise NotImplementedError
 
 
 class StepLimiter(Callback):
-    def __init__(self, niter):
+    """Limit the maximum number of steps of an algorithm.
+
+    Parameters
+    ----------
+    alg : `Algorithm`
+        Algorithm object that uses this callback.
+    niter : int
+        Maximum number of steps.
+    """
+
+    def __init__(self, alg, niter):
+        super(StepLimiter, self).__init__(alg)
         self.step = 0
         self.niter = niter
 
-    def __call__(self, obj):
+    def __call__(self):
         self.step += 1
         if self.step >= self.niter:
             return "maximum number of iterations reached (%d)" % self.niter
 
 
-class Logger(object):
-    """Logger for algorithm convergence.
+class ErrorLogger(Callback):
+    """Log reconstruction errors for each time step
 
-    Usually passed to an algorithm as a callback.
+    An additional attribute `errors` in the algorithm will contain the logged
+    values.
 
     Parameters
     ----------
-    objective : `Operator`, optional
-        A function to evaluate the objective function value.
+    alg : `Algorithm`
+        Algorithm object that uses this callback.
     true_x : `np.ndarray`, optional
         The true optimum, if known, to compute the reconstruction error.
     """
 
-    def __init__(self, objective=None, true_x=None):
-        super(Logger, self).__init__()
-
-        self.objective = objective
+    def __init__(self, alg, true_x=None):
+        super(ErrorLogger, self).__init__(alg)
         self.true_x = true_x
+        alg.errors = []
 
-        self.objectives = []
-        """The objective function values for each time step."""
+    def __call__(self):
+        self.alg.errors.append(
+            _np.linalg.norm(self.alg.x.ravel() - self.true_x.ravel())
+            if self.true_x is not None else float("nan"))
 
-        self.errors = []
-        """The reconstruction errors for each time step."""
 
-    def __call__(self, obj):
-        self.objectives.append(self.objective(obj.x)
-                               if self.objective is not None else float("nan"))
-        self.errors.append(_np.linalg.norm(obj.x.ravel() - self.true_x.ravel())
-                           if self.true_x is not None else float("nan"))
+class ObjectiveLogger(Callback):
+    """Log objective function values for each time step
+
+    An additional attribute `objectives` in the algorithm will contain the
+    logged values.
+
+    Parameters
+    ----------
+    alg : `Algorithm`
+        Algorithm object that uses this callback.
+    objective : `Operator`, optional
+        A function to evaluate the objective function value.
+    """
+
+    def __init__(self, alg, objective=None):
+        super(ObjectiveLogger, self).__init__(alg)
+        self.objective = objective
+        alg.objectives = []
+
+    def __call__(self):
+        self.alg.objectives.append(
+            self.objective(self.alg.x)
+            if self.objective is not None else float("nan"))
 
 
 class _ClassOrInstanceMethod(object):
@@ -71,7 +112,7 @@ class _ClassOrInstanceMethod(object):
             return MethodType(self.func, obj, cls)
 
 
-def _find_subclasses_with_initparams(dct, cls):
+def _find_subclasses_with_initparams(dct, cls, skip_args=1):
     import inspect
     import warnings
 
@@ -79,12 +120,12 @@ def _find_subclasses_with_initparams(dct, cls):
     for cls in dct.values():
         if not (isinstance(cls, type) and issubclass(cls, Callback)):
             continue
-        
+
         try:
             argspec = inspect.getargspec(cls.__init__)
         except TypeError:
             continue
-        args = argspec.args[1:]
+        args = argspec.args[skip_args:]
         if argspec.varargs:
             warnings.warn("varargs in %r" % cls)
         if argspec.keywords:
@@ -92,7 +133,8 @@ def _find_subclasses_with_initparams(dct, cls):
 
         for arg in args:
             if arg in result:
-                warnings.warn("ambiguous constructor argument %r in %r" % (arg, cls))
+                warnings.warn("ambiguous constructor argument %r in %r"
+                              % (arg, cls))
             else:
                 result[arg] = cls
 
@@ -121,14 +163,14 @@ class Algorithm(object):
         The stopping criteria that caused termination.
     """
 
-    _delegate_kwargs = _find_subclasses_with_initparams(globals(), Callback)
+    _delegate_kwargs = _find_subclasses_with_initparams(globals(), Callback, skip_args=2)
 
     def __init__(self, callbacks=(), **kwargs):
         self._callbacks = list(callbacks)
         delegates = {}
         for key, value in kwargs.items():
             delegates.setdefault(self._delegate_kwargs[key], {})[key] = value
-        self._callbacks.extend(k(**v) for k, v in delegates.items())
+        self._callbacks.extend(k(self, **v) for k, v in delegates.items())
 
         self.stopping_reasons = []
 
@@ -145,7 +187,8 @@ class Algorithm(object):
 
         if isinstance(cls_or_self, Algorithm):
             if args or kwargs:
-                raise TypeError("run() does not take any arguments when called as an instance method")
+                raise TypeError("run() does not take any arguments " \
+                                "when called as an instance method")
             self = cls_or_self
         else:
             self = cls_or_self(*args, **kwargs)
@@ -153,8 +196,8 @@ class Algorithm(object):
         while not self.stopping_reasons:
             self.step()
             for callback in self._callbacks:
-                message = callback(self)
+                message = callback()
                 if message:
                     self.stopping_reasons.append((callback, message))
-        
+
         return self.x
