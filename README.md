@@ -9,6 +9,7 @@ TODO
 - tests, examples, documentation
   - scipy's nosetests with np autoimport
   - build documentation using Sphinx
+  - make sure complex numbers are handled correctly
 - constraints (proximal mapping is orthogonal projection)
   - PositiveIndicatorFunction
     - gradient: PositiveIndicatorFunctionGradient
