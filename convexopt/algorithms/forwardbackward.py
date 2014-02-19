@@ -30,9 +30,11 @@ class ForwardBackward(Algorithm):
         algorithm.
     gamma : float
         Relative step size, 0 < `gamma` < 2.
+    alpha : float
+        Extrapolation factor, 0 <= `alpha` < 1.
     """
 
-    def __init__(self, f=None, g=None, A=None, B=None, gamma=1.0, *args, **kwargs):
+    def __init__(self, f=None, g=None, A=None, B=None, gamma=1.0, alpha=0.0, *args, **kwargs):
         super(ForwardBackward, self).__init__(*args, **kwargs)
 
         if (A is None) == (f is None):
@@ -53,10 +55,21 @@ class ForwardBackward(Algorithm):
         else:
             assert A.shape[0] == B.shape[0]
             self.x = _np.zeros(A.shape[0])
+        assert 0 < gamma < 2
+        assert 0 <= alpha < 1
 
         self._A = A
         self._B = B
         self._tau = gamma / B.lipschitz
+        self._alpha = alpha
+
+        if self._alpha:
+            self._last_x = self.x
 
     def step(self):
-        self.x = self._A.backward(self._B.forward(self.x, self._tau), self._tau)
+        if self._alpha:
+            y = (1 + self._alpha) * self.x - self._alpha * self._last_x
+            self._last_x = self.x
+        else:
+            y = self.x
+        self.x = self._A.backward(self._B.forward(y, self._tau), self._tau)
