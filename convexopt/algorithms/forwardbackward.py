@@ -1,6 +1,8 @@
 """Forward-backward algorithm
 """
 
+from warnings import warn as _warn
+
 import numpy as _np
 
 from convexopt.algorithms.util import Algorithm
@@ -20,21 +22,24 @@ class ForwardBackward(Algorithm):
     g : `Operator`
         An operator whose gradient implements `forward()`.  Alternatively, `B`
         can be given.
-    A : `Operator`
+    A : `Operator`, optional
         An operator that implements `backward()`.
-    B : `Operator`
+    B : `Operator`, optional
         An operator that implements `forward()`.
-    callbacks : list of callable
+    callbacks : list of callable, optional
         Each callback is called once in each iteration with the current iterate
         as an argument.  May return a non-zero message to terminate the
         algorithm.
-    gamma : float
+    gamma : float, optional
         Relative step size, 0 < `gamma` < 2.
-    alpha : float
+    alpha : float, optional
         Extrapolation factor, 0 <= `alpha` < 1.
+    epsilon : float, optional
+        If `alpha` is not given, computes one for which convergence is
+        guaranteed.
     """
 
-    def __init__(self, f=None, g=None, A=None, B=None, gamma=1.0, alpha=0.0, *args, **kwargs):
+    def __init__(self, f=None, g=None, A=None, B=None, gamma=1.0, alpha=None, epsilon=None, *args, **kwargs):
         super(ForwardBackward, self).__init__(*args, **kwargs)
 
         if (A is None) == (f is None):
@@ -55,8 +60,23 @@ class ForwardBackward(Algorithm):
         else:
             assert A.shape[0] == B.shape[0]
             self.x = _np.zeros(A.shape[0])
-        assert 0 < gamma < 2
-        assert 0 <= alpha < 1
+
+        if not 0 < gamma < 2:
+            _warn("convergence is only guaranteed for 0 < gamma < 2")
+
+        if alpha is None:
+            if epsilon is not None:
+                if not 0 < epsilon < (9.0 - 4 * gamma) / (2.0 * gamma):
+                    _warn("convergence is only guaranteed for 0 < epsilon < (9.0 - 4 * gamma) / (2.0 * gamma)")
+                alpha = 1 + (_np.sqrt(9.0 - 4 * gamma - 2 * epsilon * gamma) - 3) / gamma
+                print alpha # XXX
+            else:
+                alpha = 0
+        else:
+            if not 0 <= alpha < 1:
+                _warn("convergence is only guaranteed for 0 <= alpha < 1")
+            if epsilon is not None:
+                _warn("ignoring epsilon since alpha is given")
 
         self._A = A
         self._B = B
