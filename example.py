@@ -1,6 +1,6 @@
 import numpy as np
 
-from convexopt.algorithms.forwardbackward import ForwardBackward
+from convexopt.algorithms import ForwardBackward, forward_backward
 from convexopt.algorithms.util import ObjectiveLogger, ErrorLogger
 from convexopt.operators import L1Norm, DataTerm
 
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     print "reasons for stopping: " + ", ".join(message for cls, message in alg.stopping_reasons)
     np.testing.assert_array_almost_equal(x, alg.x, decimal=3)
 
-    xr = ForwardBackward.run(l1, l2, maxiter=10000)
+    xr = forward_backward(l1, l2, maxiter=10000)
     np.testing.assert_array_equal(alg.x, xr)
 
     alg2 = ForwardBackward(l1, l2, maxiter=10000, alpha=0.9, objectives=ObjectiveLogger(l1 + l2), errors=ErrorLogger(x))

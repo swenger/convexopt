@@ -69,7 +69,6 @@ class ForwardBackward(Algorithm):
                 if not 0 < epsilon < (9.0 - 4 * gamma) / (2.0 * gamma):
                     _warn("convergence is only guaranteed for 0 < epsilon < (9.0 - 4 * gamma) / (2.0 * gamma)")
                 alpha = 1 + (_np.sqrt(9.0 - 4 * gamma - 2 * epsilon * gamma) - 3) / gamma
-                print alpha # XXX
             else:
                 alpha = 0
         else:
@@ -93,3 +92,6 @@ class ForwardBackward(Algorithm):
         else:
             y = self.x
         self.x = self._A.backward(self._B.forward(y, self._tau), self._tau)
+
+
+forward_backward = ForwardBackward.run
