@@ -1,6 +1,6 @@
 import numpy as np
 
-from convexopt.algorithms import ForwardBackward, forward_backward
+from convexopt.algorithms import ForwardBackward, forward_backward, FISTA
 from convexopt.algorithms.util import ObjectiveLogger, ErrorLogger
 from convexopt.operators import L1Norm, DataTerm
 
@@ -22,14 +22,14 @@ if __name__ == "__main__":
     l2 = DataTerm(A, b)
 
     # solve
-    
-    alg = ForwardBackward(l1, l2, maxiter=10000, objectives=ObjectiveLogger(l1 + l2), errors=ErrorLogger(x))
-    alg.run()
-    print "reasons for stopping: " + ", ".join(message for cls, message in alg.stopping_reasons)
-    np.testing.assert_array_almost_equal(x, alg.x, decimal=3)
+
+    alg1 = ForwardBackward(l1, l2, maxiter=10000, objectives=ObjectiveLogger(l1 + l2), errors=ErrorLogger(x))
+    alg1.run()
+    print "reasons for stopping: " + ", ".join(message for cls, message in alg1.stopping_reasons)
+    np.testing.assert_array_almost_equal(x, alg1.x, decimal=3)
 
     xr = forward_backward(l1, l2, maxiter=10000)
-    np.testing.assert_array_equal(alg.x, xr)
+    np.testing.assert_array_equal(alg1.x, xr)
 
     alg2 = ForwardBackward(l1, l2, maxiter=10000, alpha=0.9, objectives=ObjectiveLogger(l1 + l2), errors=ErrorLogger(x))
     alg2.run()
@@ -41,13 +41,25 @@ if __name__ == "__main__":
     print "reasons for stopping: " + ", ".join(message for cls, message in alg3.stopping_reasons)
     np.testing.assert_array_almost_equal(x, alg3.x, decimal=3)
     
+    alg4 = FISTA(l2, l1, maxiter=10000, objectives=ObjectiveLogger(l1 + l2), errors=ErrorLogger(x))
+    alg4.run()
+    print "reasons for stopping: " + ", ".join(message for cls, message in alg4.stopping_reasons)
+    np.testing.assert_array_almost_equal(x, alg4.x, decimal=3)
+    
     # plot convergence
     import pylab
-    pylab.loglog(alg.errors, label="error")
-    pylab.loglog(alg.objectives, label="residual")
-    pylab.loglog(alg2.errors, label="error with alpha=%f" % alg2._alpha)
-    pylab.loglog(alg2.objectives, label="residual with alpha=%f" % alg2._alpha)
-    pylab.loglog(alg3.errors, label="error with alpha=%f" % alg3._alpha)
-    pylab.loglog(alg3.objectives, label="residual with alpha=%f" % alg3._alpha)
+    pylab.figure("residuals")
+    pylab.loglog(alg1.objectives, label="fwbw, alpha=%f" % alg1._alpha)
+    pylab.loglog(alg2.objectives, label="fwbw, alpha=%f" % alg2._alpha)
+    pylab.loglog(alg3.objectives, label="fwbw, alpha=%f" % alg3._alpha)
+    pylab.loglog(alg4.objectives, label="fista")
     pylab.legend()
+
+    pylab.figure("errors")
+    pylab.loglog(alg1.errors, label="fwbw, alpha=%f" % alg1._alpha)
+    pylab.loglog(alg2.errors, label="fwbw, alpha=%f" % alg2._alpha)
+    pylab.loglog(alg3.errors, label="fwbw, alpha=%f" % alg3._alpha)
+    pylab.loglog(alg4.errors, label="fista")
+    pylab.legend()
+
     pylab.show()
