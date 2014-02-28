@@ -2,6 +2,7 @@
 """
 
 import numpy as _np
+from functools import partial
 
 from convexopt.operators.util import Operator, squared_operator_norm
 
@@ -25,6 +26,8 @@ class DataTermGradient(Operator):
         self.A = A  # LinearOperator
         self.b = b  # vector
         self._lipschitz = None
+        self._solve_backward = None
+        self._solve_backward_tau = None
 
     def __call__(self, x):
         return self.A.rmatvec(self.A.matvec(x) - self.b)
@@ -41,14 +44,34 @@ class DataTermGradient(Operator):
 
     def backward(self, x, tau):
         # (1 + tau A^T A)^-1(x + tau A^T b)
-        from scipy.sparse.linalg import lsqr, LinearOperator
+        # which amounts to
+        #   min_y ||A y - b||^2_F + tau * || y - x ||
 
-        def matvec(y):
-            return y + tau * self.A.rmatvec(self.A.matvec(y))
-        x, istop, itn, r1norm, r2norm, anorm, acond, arnorm, xnorm, var = \
-            lsqr(LinearOperator(matvec, matvec),
-                 x + tau * self.A.rmatvec(self.b))
-        return x
+        # TODO solve the dual when we have fat matrix
+
+        if hasattr(self.A, 'A') and type(self.A.A) is _np.ndarray:
+            # self.A is a dense matrix
+            # we can pre-factorize the system using cholesky decomposition
+            # and then quickly re-solve the system
+            if self._solve_backward is None or self._solve_backward_tau != tau:
+                from scipy.linalg import cho_factor, cho_solve
+
+                A = self.A.A
+                H = tau * A.T.dot(A) + _np.eye(A.shape[1])
+                self._solve_backward = partial(cho_solve, cho_factor(H))
+                self._solve_backward_tau = tau
+
+            return self._solve_backward(x + tau * self.A.rmatvec(self.b))
+
+        else:
+            from scipy.sparse.linalg import lsqr, LinearOperator
+
+            def matvec(y):
+                return y + tau * self.A.rmatvec(self.A.matvec(y))
+            x, istop, itn, r1norm, r2norm, anorm, acond, arnorm, xnorm, var = \
+                lsqr(LinearOperator((self.A.shape[1], self.A.shape[1]), matvec, matvec),
+                     x + tau * self.A.rmatvec(self.b))
+            return x
 
 
 class DataTerm(Operator):
