@@ -2,28 +2,9 @@
 Alternating Direction Method of Multipliers (ADMM)
 """
 
-from itertools import repeat as _repeat
-
 import numpy as _np
 
 from convexopt.algorithms.util import Algorithm
-
-
-def _accumulate(iterable, func=lambda total, element: total + element):
-    it = iter(iterable)
-    total = next(it)
-    yield total
-    for element in it:
-        total = func(total, element)
-        yield total
-
-
-def _diff(iterable, func=lambda old, new: new - old):
-    it = iter(iterable)
-    old = next(it)
-    for new in it:
-        yield func(old, new)
-        old = new
 
 
 class ADMM(Algorithm):
