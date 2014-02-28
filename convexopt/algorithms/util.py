@@ -42,13 +42,13 @@ class Callback(object):
     def get_callback_for_initparam(cls, key):
         return cls.__metaclass__.registry[key]
 
-    def __call__(self, x):
+    def __call__(self, alg):
         """Called from within `Algorithm.run` to determine convergence
 
         Parameters
         ----------
-        x : `np.ndarray`
-            The current iterate.
+        alg : `Algorithm`
+            The algorithm on which to check for convergence.
 
         Returns
         -------
@@ -73,7 +73,7 @@ class StepLimiter(Callback):
         self.step = 0
         self.maxiter = maxiter
 
-    def __call__(self, x):
+    def __call__(self, alg):
         self.step += 1
         if self.step >= self.maxiter:
             return "maximum number of iterations reached (%d)" % self.maxiter
@@ -83,14 +83,24 @@ class Logger(list):
     """Base class for logger objects to log algorithm convergence
     """
 
-    def __call__(self, x):
+    def __call__(self, alg):
         """Log status for a new iterate
+
+        Parameters
+        ----------
+        alg : `Algorithm`
+            The algorithm for which to log status.
         """
 
-        self.append(self.value(x))
+        self.append(self.value(alg))
 
-    def value(self, x):
+    def value(self, alg):
         """Compute status for a new iterate
+
+        Parameters
+        ----------
+        alg : `Algorithm`
+            The algorithm for which to log status.
         """
 
         raise NotImplementedError
@@ -115,8 +125,8 @@ class ErrorLogger(Logger):
         super(ErrorLogger, self).__init__()
         self.true_x = true_x
 
-    def value(self, x):
-        return _np.linalg.norm(x.ravel() - self.true_x.ravel())
+    def value(self, alg):
+        return _np.linalg.norm(alg.x.ravel() - self.true_x.ravel())
 
 
 class ObjectiveLogger(Logger):
@@ -130,7 +140,7 @@ class ObjectiveLogger(Logger):
 
     def __init__(self, objective):
         super(ObjectiveLogger, self).__init__()
-        self.value = objective
+        self.value = lambda alg: objective(alg.x)
 
 
 class _ClassOrInstanceMethod(object):
@@ -223,9 +233,9 @@ class Algorithm(object):
         while not self.stopping_reasons:
             self.step()
             for logger in self.loggers:
-                logger(self.x)
+                logger(self)
             for callback in self.callbacks:
-                message = callback(self.x)
+                message = callback(self)
                 if message:
                     self.stopping_reasons.add((callback, message))
 
