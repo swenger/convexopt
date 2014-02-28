@@ -46,7 +46,7 @@ class DataTermGradient(Operator):
         def matvec(y):
             return y + tau * self.A.rmatvec(self.A.matvec(y))
         x, istop, itn, r1norm, r2norm, anorm, acond, arnorm, xnorm, var = \
-            lsqr(LinearOperator(matvec, matvec),
+            lsqr(LinearOperator((self.A.shape[1], self.A.shape[1]), matvec, matvec),
                  x + tau * self.A.rmatvec(self.b))
         return x
 
