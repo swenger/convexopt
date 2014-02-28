@@ -1,15 +1,54 @@
 """Utilities for algorithms
 """
 
+from inspect import getargspec as _getargspec
+from warnings import warn as _warn
+
 import numpy as _np
+
+
+class CallbackMeta(type):
+    registry = {}
+
+    def __new__(cls, name, bases, dct):
+        newcls = super(cls, CallbackMeta).__new__(cls, name, bases, dct)
+        try:
+            argspec = _getargspec(dct["__init__"])
+        except (KeyError, TypeError):
+            pass
+        else:
+            args = argspec.args[1:]
+            if argspec.varargs:
+                _warn("varargs in %r" % cls)
+            if argspec.keywords:
+                _warn("keywords in %r" % cls)
+
+            for arg in args:
+                if arg in cls.registry:
+                    _warn("ambiguous constructor argument %r in %r"
+                                  % (arg, cls))
+                else:
+                    cls.registry[arg] = newcls
+        return newcls
 
 
 class Callback(object):
     """Base class for callback objects to determine algorithm convergence
     """
 
-    def __call__(self):
+    __metaclass__ = CallbackMeta
+
+    @classmethod
+    def get_callback_for_initparam(cls, key):
+        return cls.__metaclass__.registry[key]
+
+    def __call__(self, x):
         """Called from within `Algorithm.run` to determine convergence
+
+        Parameters
+        ----------
+        x : `np.ndarray`
+            The current iterate.
 
         Returns
         -------
@@ -21,7 +60,7 @@ class Callback(object):
 
 
 class StepLimiter(Callback):
-    """Limit the maximum number of steps of an algorithm.
+    """Limit the maximum number of steps of an algorithm
 
     Parameters
     ----------
@@ -106,35 +145,6 @@ class _ClassOrInstanceMethod(object):
             return MethodType(self.func, obj, cls)
 
 
-def _find_subclasses_with_initparams(dct, base_class, skip_args=1):
-    import inspect
-    import warnings
-
-    result = {}
-    for cls in dct.values():
-        if not (isinstance(cls, type) and issubclass(cls, base_class)):
-            continue
-
-        try:
-            argspec = inspect.getargspec(cls.__init__)
-        except TypeError:
-            continue
-        args = argspec.args[skip_args:]
-        if argspec.varargs:
-            warnings.warn("varargs in %r" % cls)
-        if argspec.keywords:
-            warnings.warn("keywords in %r" % cls)
-
-        for arg in args:
-            if arg in result:
-                warnings.warn("ambiguous constructor argument %r in %r"
-                              % (arg, cls))
-            else:
-                result[arg] = cls
-
-    return result
-
-
 class Algorithm(object):
     """Base class for iterative algorithms
 
@@ -163,8 +173,6 @@ class Algorithm(object):
     automatically called once per iteration.
     """
 
-    _delegate_kwargs = _find_subclasses_with_initparams(globals(), Callback)
-
     def __init__(self, callbacks=(), loggers=(), **kwargs):
         self.callbacks = set(callbacks)
         self.loggers = set(loggers)
@@ -175,7 +183,7 @@ class Algorithm(object):
             if isinstance(value, Logger):
                 setattr(self, key, value)
             else:
-                delegates.setdefault(self._delegate_kwargs[key], {})[key] = value
+                delegates.setdefault(Callback.get_callback_for_initparam(key), {})[key] = value
         self.callbacks.update(k(**v) for k, v in delegates.items())
 
     def step(self):
