@@ -251,3 +251,30 @@ class ScaledOperator(Operator):
     def backward(self, x, tau):
         # (1 + tau (a A))^-1(x) = (1 + (tau a) A)^-1(x)
         return self.op.backward(x * self.b, self.a * tau)
+
+    @property
+    def shape(self):
+        return self.op.shape
+
+
+class IdentityOperator(Operator):
+    """The identity
+
+    Parameters
+    ----------
+    size : `int`
+        The size (optional).
+    """
+
+    def __init__(self, size=None):
+        super(IdentityOperator, self).__init__()
+        self.shape = (size, size)
+
+    def __call__(self, x):
+        return x
+
+    def forward(self, x, tau):
+        return (1.0 - tau) * x
+
+    def backward(self, x, tau):
+        return x / (1.0 + tau)
