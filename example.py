@@ -1,6 +1,7 @@
 import numpy as np
+import scipy.sparse as sp
 
-from convexopt.algorithms import ForwardBackward, forward_backward, FISTA, ADMM
+from convexopt.algorithms import ForwardBackward, forward_backward, FISTA, ADMM, APGM
 from convexopt.algorithms.util import ObjectiveLogger, ErrorLogger
 from convexopt.operators import L1Norm, DataTerm
 
@@ -24,6 +25,11 @@ if __name__ == "__main__":
     # solve
     maxiter = 5000
 
+    apgm = APGM(l2, l1, rho=0.5, maxiter=maxiter, objectives=ObjectiveLogger(l1 + l2), errors=ErrorLogger(x))
+    apgm.run()
+    print "reasons for stopping: " + ", ".join(message for cls, message in apgm.stopping_reasons)
+    np.testing.assert_array_almost_equal(x, apgm.x, decimal=3)
+    
     alg1 = ForwardBackward(l1, l2, maxiter=maxiter, objectives=ObjectiveLogger(l1 + l2), errors=ErrorLogger(x))
     alg1.run()
     print "reasons for stopping: " + ", ".join(message for cls, message in alg1.stopping_reasons)
@@ -56,7 +62,7 @@ if __name__ == "__main__":
     admm2.run()
     print "reasons for stopping: " + ", ".join(message for cls, message in admm2.stopping_reasons)
     np.testing.assert_array_almost_equal(x, admm2.x, decimal=3)
-    
+
     # plot convergence
     import pylab
     pylab.figure("residuals")
@@ -66,6 +72,7 @@ if __name__ == "__main__":
     pylab.loglog(alg4.objectives, label="fista")
     pylab.loglog(admm1.objectives, label="admm")
     pylab.loglog(admm2.objectives, label="admm overrelax")
+    pylab.loglog(apgm.objectives, label="apgm")
     pylab.legend()
 
     pylab.figure("errors")
@@ -75,6 +82,7 @@ if __name__ == "__main__":
     pylab.loglog(alg4.errors, label="fista")
     pylab.loglog(admm1.errors, label="admm")
     pylab.loglog(admm2.errors, label="admm overrelax")
+    pylab.loglog(apgm.errors, label="apgm")
     pylab.legend()
 
     pylab.figure("admm diagnostics")
