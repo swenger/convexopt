@@ -1,5 +1,5 @@
 """
-Alternating Proximal Gradient Method (APGM)
+Alternating Proximal Gradient Method for Convex Minimization (APGM)
 """
 
 import numpy as _np
