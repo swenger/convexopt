@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.sparse as sp
 
-from convexopt.algorithms import ForwardBackward, forward_backward, FISTA, ADMM, APGM
+from convexopt.algorithms import ForwardBackward, forward_backward, FISTA, ADMM, APGM, DouglasRachford
 from convexopt.algorithms.util import ObjectiveLogger, ErrorLogger
 from convexopt.operators import L1Norm, DataTerm
 
@@ -24,6 +24,11 @@ if __name__ == "__main__":
 
     # solve
     maxiter = 5000
+    
+    dr = DouglasRachford(l2, l1, gamma=0.1, maxiter=maxiter, objectives=ObjectiveLogger(l1 + l2), errors=ErrorLogger(x))
+    dr.run()
+    print "reasons for stopping: " + ", ".join(message for cls, message in dr.stopping_reasons)
+    np.testing.assert_array_almost_equal(x, dr.x, decimal=3)
 
     apgm = APGM(l2, l1, rho=0.5, maxiter=maxiter, objectives=ObjectiveLogger(l1 + l2), errors=ErrorLogger(x))
     apgm.run()
@@ -70,6 +75,7 @@ if __name__ == "__main__":
     pylab.loglog(alg2.objectives, label="fwbw, alpha=%f" % alg2._alpha)
     pylab.loglog(alg3.objectives, label="fwbw, alpha=%f" % alg3._alpha)
     pylab.loglog(alg4.objectives, label="fista")
+    pylab.loglog(dr.objectives, label="dr")
     pylab.loglog(admm1.objectives, label="admm")
     pylab.loglog(admm2.objectives, label="admm overrelax")
     pylab.loglog(apgm.objectives, label="apgm")
@@ -80,6 +86,7 @@ if __name__ == "__main__":
     pylab.loglog(alg2.errors, label="fwbw, alpha=%f" % alg2._alpha)
     pylab.loglog(alg3.errors, label="fwbw, alpha=%f" % alg3._alpha)
     pylab.loglog(alg4.errors, label="fista")
+    pylab.loglog(dr.errors, label="dr")
     pylab.loglog(admm1.errors, label="admm")
     pylab.loglog(admm2.errors, label="admm overrelax")
     pylab.loglog(apgm.errors, label="apgm")
