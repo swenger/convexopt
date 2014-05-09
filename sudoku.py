@@ -1,3 +1,9 @@
+"""Linear Systems, Sparse Solutions, and Sudoku
+
+Prabhu Babu, Kristiaan Pelckmans, Petre Stoica, and Jian Li
+IEEE Signal Processing Letters, vol. 17, no. 1, January 2010
+"""
+
 import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg as sla
@@ -55,6 +61,7 @@ def solve_sudoku(clues, maxiter=1000, epsilon=0.5, threshold=1e-6, l1weight=1e-2
     l1 = l1weight * NonnegativeL1Norm()
     l2 = DataTerm(A, b)
 
+    # iterative reweighted l1-norm minimization
     x = fista(l2, l1, maxiter=maxiter)
     while True:
         tau = 1.0 / (x + epsilon)
