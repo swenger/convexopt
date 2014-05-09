@@ -11,69 +11,43 @@ cs = [] # constraints
 # x[j, 0, i] + x[j, 1, i] + x[j, 2, i] + ... + x[j, 8, i] = 1 # for all i, j: number of i's in j'ths row = 1
 for j in range(9):
     for i in range(9):
-        k = np.ravel_multi_index(ijk[:, j, :, i], (9, 9, 9))
-        cs.append(sp.coo_matrix((np.ones(len(k)), (np.zeros(len(k)), k)), shape=(1, 9 * 9 * 9)))
+        cs.append(np.ravel_multi_index(ijk[:, j, :, i], (9, 9, 9)))
 
 # x[0, j, i] + x[1, j, i] + x[2, j, i] + ... + x[8, j, i] = 1 # for all i, j: number of i's in j'ths column = 1
 for j in range(9):
     for i in range(9):
-        k = np.ravel_multi_index(ijk[:, :, j, i], (9, 9, 9))
-        cs.append(sp.coo_matrix((np.ones(len(k)), (np.zeros(len(k)), k)), shape=(1, 9 * 9 * 9)))
+        cs.append(np.ravel_multi_index(ijk[:, :, j, i], (9, 9, 9)))
 
 # box constraints
 for j in range(9):
     x = 3 * (j % 3)
     y = 3 * (j // 3)
     for i in range(9):
-        k = np.ravel_multi_index(ijk[:, x:x+3, y:y+3, i].reshape(3, -1), (9, 9, 9))
-        cs.append(sp.coo_matrix((np.ones(len(k)), (np.zeros(len(k)), k)), shape=(1, 9 * 9 * 9)))
+        cs.append(np.ravel_multi_index(ijk[:, x:x+3, y:y+3, i].reshape(3, -1), (9, 9, 9)))
 
 # cell constraints: exactly one number in cell
 for x in range(9):
     for y in range(9):
-        k = np.ravel_multi_index(ijk[:, x, y, :].reshape(3, -1), (9, 9, 9))
-        cs.append(sp.coo_matrix((np.ones(len(k)), (np.zeros(len(k)), k)), shape=(1, 9 * 9 * 9)))
+        cs.append(np.ravel_multi_index(ijk[:, x, y, :].reshape(3, -1), (9, 9, 9)))
 
-# clues
 clues = [
-        (1, 3, 3),
-        (1, 6, 9),
-        (1, 8, 8),
-        (1, 9, 1),
-        (2, 4, 2),
-        (2, 8, 6),
-        (3, 1, 5),
-        (3, 5, 1),
-        (3, 7, 7),
-        (4, 1, 8),
-        (4, 2, 9),
-        (5, 3, 5),
-        (5, 4, 6),
-        (5, 6, 1),
-        (5, 7, 2),
-        (6, 8, 3),
-        (6, 9, 7),
-        (7, 3, 9),
-        (7, 5, 2),
-        (7, 9, 8),
-        (8, 2, 7),
-        (8, 6, 4),
-        (9, 1, 2),
-        (9, 2, 5),
-        (9, 4, 8),
-        (9, 7, 6),
-        ]
-for row, column, number in clues:
-    k = np.ravel_multi_index(ijk[:, row - 1, column - 1, number - 1], (9, 9, 9))
-    cs.append(sp.coo_matrix(([1], ([0], [k])), shape=(1, 9 * 9 * 9)))
+    [0, 0, 3, 0, 0, 9, 0, 8, 1],
+    [0, 0, 0, 2, 0, 0, 0, 6, 0],
+    [5, 0, 0, 0, 1, 0, 7, 0, 0],
+    [8, 9, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 5, 6, 0, 1, 2, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 3, 7],
+    [0, 0, 9, 0, 2, 0, 0, 0, 8],
+    [0, 7, 0, 0, 0, 4, 0, 0, 0],
+    [2, 5, 0, 8, 0, 0, 6, 0, 0],
+]
 
-# output clues
-m = np.zeros((9, 9), dtype=np.uint8)
-for row, column, number in clues:
-    m[row - 1, column - 1] = number
-print m
+for i, row in enumerate(clues):
+    for j, col in enumerate(row):
+        cs.append([np.ravel_multi_index(ijk[:, i, j, col - 1], (9, 9, 9))])
 
-A = sla.aslinearoperator(sp.vstack(cs))
+ms = [sp.coo_matrix((np.ones(len(k)), (np.zeros(len(k)), k)), shape=(1, 9 * 9 * 9)) for k in cs]
+A = sla.aslinearoperator(sp.vstack(ms))
 b = np.ones(len(cs))
 
 l1 = 1e-2 * NonnegativeL1Norm()
@@ -94,4 +68,6 @@ x = x.reshape(9, 9, 9) # row, column, number -> probability
 solution = np.argmax(x, axis=2) + 1
 
 print solution
+for x in map(set, solution): print x
+for x in map(set, solution.T): print x
 
