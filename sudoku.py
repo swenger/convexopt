@@ -14,13 +14,10 @@ from convexopt.operators import NonnegativeL1Norm, DataTerm
 class LinearIndexer(object):
     def __init__(self, shape):
         self.shape = shape
-        self.ijk = np.indices(shape)
+        self.index = np.arange(np.product(shape)).reshape(shape)
         
     def __getitem__(self, key):
-        result = np.ravel_multi_index(self.ijk.__getitem__((slice(None),) + key), self.shape)
-        if not isinstance(result, np.ndarray):
-            result = np.asarray([result])
-        return result.ravel()
+        return np.ravel(self.index[key])
 
 def solve_sudoku(clues, maxiter=1000, epsilon=0.5, threshold=1e-6, l1weight=1e-2):
     clues = np.asarray(clues, dtype=int)
