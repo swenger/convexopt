@@ -44,7 +44,8 @@ clues = [
 
 for i, row in enumerate(clues):
     for j, col in enumerate(row):
-        cs.append([np.ravel_multi_index(ijk[:, i, j, col - 1], (9, 9, 9))])
+        if col:
+            cs.append([np.ravel_multi_index(ijk[:, i, j, col - 1], (9, 9, 9))])
 
 ms = [sp.coo_matrix((np.ones(len(k)), (np.zeros(len(k)), k)), shape=(1, 9 * 9 * 9)) for k in cs]
 A = sla.aslinearoperator(sp.vstack(ms))
