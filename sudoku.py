@@ -5,70 +5,101 @@ import scipy.sparse.linalg as sla
 from convexopt.algorithms import fista
 from convexopt.operators import NonnegativeL1Norm, DataTerm
 
-ijk = np.indices((9, 9, 9))
-cs = [] # constraints
+class LinearIndexer(object):
+    def __init__(self, shape):
+        self.shape = shape
+        self.ijk = np.indices(shape)
+        
+    def __getitem__(self, key):
+        result = np.ravel_multi_index(self.ijk.__getitem__((slice(None),) + key), self.shape)
+        if not isinstance(result, np.ndarray):
+            result = np.asarray([result])
+        return result.ravel()
 
-# x[j, 0, i] + x[j, 1, i] + x[j, 2, i] + ... + x[j, 8, i] = 1 # for all i, j: number of i's in j'ths row = 1
-for j in range(9):
-    for i in range(9):
-        cs.append(np.ravel_multi_index(ijk[:, j, :, i], (9, 9, 9)))
+def solve_sudoku(clues, maxiter=1000, epsilon=0.5, threshold=1e-6, l1weight=1e-2):
+    clues = np.asarray(clues, dtype=int)
+    n = len(clues)
+    assert clues.shape == (n, n), "sudoku must be square"
+    assert int(np.sqrt(n)) ** 2 == n, "size of sudoku must be a square number"
+    assert 0 < epsilon < 1, "epsilon must be between 0 and 1"
 
-# x[0, j, i] + x[1, j, i] + x[2, j, i] + ... + x[8, j, i] = 1 # for all i, j: number of i's in j'ths column = 1
-for j in range(9):
-    for i in range(9):
-        cs.append(np.ravel_multi_index(ijk[:, :, j, i], (9, 9, 9)))
+    idx = LinearIndexer((9, 9, 9))
+    cs = [] # constraints: each entry is a list of components whose sum should be one
 
-# box constraints
-for j in range(9):
-    x = 3 * (j % 3)
-    y = 3 * (j // 3)
-    for i in range(9):
-        cs.append(np.ravel_multi_index(ijk[:, x:x+3, y:y+3, i].reshape(3, -1), (9, 9, 9)))
+    for j in range(9): # in each row, ...
+        for i in range(9): # ...each number...
+            cs.append(idx[j, :, i]) # ...must occur exactly once
 
-# cell constraints: exactly one number in cell
-for x in range(9):
-    for y in range(9):
-        cs.append(np.ravel_multi_index(ijk[:, x, y, :].reshape(3, -1), (9, 9, 9)))
+    for j in range(9): # in each column, ...
+        for i in range(9): # ...each number...
+            cs.append(idx[:, j, i]) # ...must occur exactly once
 
-clues = [
-    [0, 0, 3, 0, 0, 9, 0, 8, 1],
-    [0, 0, 0, 2, 0, 0, 0, 6, 0],
-    [5, 0, 0, 0, 1, 0, 7, 0, 0],
-    [8, 9, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 5, 6, 0, 1, 2, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 3, 7],
-    [0, 0, 9, 0, 2, 0, 0, 0, 8],
-    [0, 7, 0, 0, 0, 4, 0, 0, 0],
-    [2, 5, 0, 8, 0, 0, 6, 0, 0],
-]
+    for x in range(0, 9, 3): # in each box along x...
+        for y in range(0, 9, 3): # ...and y, ...
+            for i in range(9): # ...each number...
+                cs.append(idx[x:x+3, y:y+3, i]) # ...must occur exactly once
 
-for i, row in enumerate(clues):
-    for j, col in enumerate(row):
-        if col:
-            cs.append([np.ravel_multi_index(ijk[:, i, j, col - 1], (9, 9, 9))])
+    for x in range(9): # in each cell along x...
+        for y in range(9): # ...and y, ...
+            cs.append(idx[x, y, :]) # ...there must be exactly one number
 
-ms = [sp.coo_matrix((np.ones(len(k)), (np.zeros(len(k)), k)), shape=(1, 9 * 9 * 9)) for k in cs]
-A = sla.aslinearoperator(sp.vstack(ms))
-b = np.ones(len(cs))
+    for i, row in enumerate(clues): # for each cell along x...
+        for j, col in enumerate(row): # ...and y...
+            if col: # ...for that a nonzero clue is given, ...
+                cs.append(idx[i, j, col - 1]) # ...this number must occur in this cell
 
-l1 = 1e-2 * NonnegativeL1Norm()
-l2 = DataTerm(A, b)
-epsilon = 0.5
+    ms = [sp.coo_matrix((np.ones(len(k)), (np.zeros(len(k)), k)), shape=(1, 9 * 9 * 9)) for k in cs]
+    A = sla.aslinearoperator(sp.vstack(ms))
+    b = np.ones(len(cs))
 
-x = fista(l2, l1, maxiter=1000)
-while True:
-    tau = 1.0 / (x + epsilon)
-    old_x = x
-    x = fista(l2, l1 * tau, maxiter=1000)
-    d = np.square(x - old_x).sum()
-    print d
-    if d < 1e-6:
-        break
-x = x.reshape(9, 9, 9) # row, column, number -> probability
+    l1 = l1weight * NonnegativeL1Norm()
+    l2 = DataTerm(A, b)
 
-solution = np.argmax(x, axis=2) + 1
+    x = fista(l2, l1, maxiter=maxiter)
+    while True:
+        tau = 1.0 / (x + epsilon)
+        old_x = x
+        x = fista(l2, l1 * tau, maxiter=maxiter)
+        d = np.square(x - old_x).sum()
+        print d
+        if d < threshold:
+            break
+    x = x.reshape(9, 9, 9) # row, column, number -> probability
 
-print solution
-for x in map(set, solution): print x
-for x in map(set, solution.T): print x
+    return np.argmax(x, axis=2) + 1
+
+def check_sudoku(solution, clues=None):
+    if clues is not None:
+        clues = np.asarray(clues, dtype=int)
+        assert solution.shape == clues.shape, "solution shape does not match clues shape"
+        assert all(solution[clues != 0] == clues[clues != 0]), "solution does not match clues"
+
+    n = len(solution)
+    assert solution.shape == (n, n), "sudoku must be square"
+    assert int(np.sqrt(n)) ** 2 == n, "size of sudoku must be a square number"
+
+    for i, row in enumerate(solution, 1):
+        assert sorted(set(row)) == range(1, n + 1), "row %d is invalid" % i
+    for i, col in enumerate(solution.T, 1):
+        assert sorted(set(col)) == range(1, n + 1), "column %d is invalid" % i
+    for i in range(3):
+        for j in range(3):
+            assert sorted(set(solution[3*i:3*i+3, 3*j:3*j+3].ravel())) == range(1, n + 1), "box %d-%d is invalid" % (i + 1, j + 1)
+
+if __name__ == "__main__":
+    clues = [
+        [0, 0, 3, 0, 0, 9, 0, 8, 1],
+        [0, 0, 0, 2, 0, 0, 0, 6, 0],
+        [5, 0, 0, 0, 1, 0, 7, 0, 0],
+        [8, 9, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 5, 6, 0, 1, 2, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 3, 7],
+        [0, 0, 9, 0, 2, 0, 0, 0, 8],
+        [0, 7, 0, 0, 0, 4, 0, 0, 0],
+        [2, 5, 0, 8, 0, 0, 6, 0, 0],
+    ]
+
+    solution = solve_sudoku(clues)
+    print solution
+    check_sudoku(solution, clues)
 
