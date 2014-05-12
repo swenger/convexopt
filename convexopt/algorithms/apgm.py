@@ -48,7 +48,7 @@ class APGM(Algorithm):
                 n = len(c)
             else:
                 raise ValueError("shape of A is undefined")
-            A = _sp.linalg.aslinearoperator(_sp.eye(n, n))
+            A = _sp.linalg.LinearOperator((n, n), lambda x: x, lambda x: x)
         elif A.shape[1] is None:
             assert f.gradient.shape[1] is not None
         else:
@@ -65,7 +65,7 @@ class APGM(Algorithm):
                 n = len(c)
             else:
                 raise ValueError("shape of B is undefined")
-            B = _sp.linalg.aslinearoperator(-_sp.eye(n, n))
+            B = _sp.linalg.LinearOperator((n, n), lambda x: -x, lambda x: -x)
         elif B.shape[1] is None:
             assert g.gradient.shape[1] is not None
         else:
