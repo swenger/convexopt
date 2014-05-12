@@ -34,7 +34,7 @@ class APGM(Algorithm):
         algorithm.
     """
 
-    def __init__(self, f, g, A=None, B=None, c=None, rho=1.0, gamma=0.99, *args, **kwargs):
+    def __init__(self, f, g, A=None, B=None, c=None, rho=1.0, gamma=0.99, x0=None, y0=None, *args, **kwargs):
         super(APGM, self).__init__(*args, **kwargs)
 
         if A is None:
@@ -75,8 +75,8 @@ class APGM(Algorithm):
             c = _np.zeros(A.shape[0])
         assert c.shape == (A.shape[0],) == (B.shape[0],)
 
-        self.x = _np.zeros(A.shape[1])
-        self.y = _np.zeros(B.shape[1])
+        self.x = _np.zeros(A.shape[1]) if x0 is None else x0
+        self.y = _np.zeros(B.shape[1]) if y0 is None else y0
         self.u = _np.zeros(A.shape[0])
 
         self.f = f
