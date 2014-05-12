@@ -34,7 +34,7 @@ class APGM(Algorithm):
         algorithm.
     """
 
-    def __init__(self, f, g, A=None, B=None, c=None, rho=1.0, gamma=0.99, *args, **kwargs):
+    def __init__(self, f, g, A=None, B=None, c=None, rho=1.0, gamma=0.99, x0=None, y0=None, *args, **kwargs):
         super(APGM, self).__init__(*args, **kwargs)
 
         if A is None:
@@ -48,24 +48,15 @@ class APGM(Algorithm):
                 n = len(c)
             else:
                 raise ValueError("shape of A is undefined")
-            A = _sp.linalg.aslinearoperator(_sp.eye(n, n))
+            A = _sp.linalg.LinearOperator((n, n), lambda x: x, lambda x: x)
         elif A.shape[1] is None:
             assert f.gradient.shape[1] is not None
         else:
             assert f.gradient.shape[1] is None or f.gradient.shape[1] == A.shape[1]
 
         if B is None:
-            if f.gradient.shape[1] is not None:
-                n = f.gradient.shape[1]
-            elif g.gradient.shape[1] is not None:
-                n = g.gradient.shape[1]
-            elif A is not None and A.shape[1] is not None:
-                n = A.shape[1]
-            elif c is not None:
-                n = len(c)
-            else:
-                raise ValueError("shape of B is undefined")
-            B = _sp.linalg.aslinearoperator(-_sp.eye(n, n))
+            n = A.shape[0]
+            B = _sp.linalg.LinearOperator((n, n), lambda x: -x, lambda x: -x)
         elif B.shape[1] is None:
             assert g.gradient.shape[1] is not None
         else:
@@ -75,8 +66,8 @@ class APGM(Algorithm):
             c = _np.zeros(A.shape[0])
         assert c.shape == (A.shape[0],) == (B.shape[0],)
 
-        self.x = _np.zeros(A.shape[1])
-        self.y = _np.zeros(B.shape[1])
+        self.x = _np.zeros(A.shape[1]) if x0 is None else x0
+        self.y = _np.zeros(B.shape[1]) if y0 is None else y0
         self.u = _np.zeros(A.shape[0])
 
         self.f = f

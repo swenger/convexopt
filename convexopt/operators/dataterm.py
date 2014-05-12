@@ -6,7 +6,7 @@ from functools import partial
 
 from convexopt.operators.util import Operator, squared_operator_norm
 
-__all__ = ["DataTerm"]
+__all__ = ["DataTerm", "L2Distance"]
 
 
 class DataTermGradient(Operator):
@@ -91,3 +91,37 @@ class DataTerm(Operator):
     @property
     def shape(self):
         return (0, self.A.shape[1])
+
+
+class L2Distance(Operator):
+    """0.5 || x - b ||_2^2"""
+
+    def __init__(self, b):
+        super(L2Distance, self).__init__()
+        self.b = b
+        self.gradient = L2DistanceGradient(b)
+
+    def __call__(self, x):
+        return 0.5 * _np.sum((x - self.b)**2)
+
+class L2DistanceGradient(Operator):
+    """Gradient of 0.5 || x - b||_2^2 """
+    def __init__(self, b):
+        super(L2DistanceGradient, self).__init__()
+        self.b = b
+
+    def __call__(self, x):
+        return x - self.b
+
+    @property
+    def shape(self):
+        return (self.b.shape[0], self.b.shape[0])
+
+    @property
+    def lipschitz(self):
+        return 1.0
+
+    def backward(self, x, tau):
+        # minimize for y: 1/2 * || y - b ||_2^2 + 1 / (2 tau) * || y - x ||
+        return (self.b + 1/tau * x) / (1 + 1/tau)
+
