@@ -55,16 +55,7 @@ class APGM(Algorithm):
             assert f.gradient.shape[1] is None or f.gradient.shape[1] == A.shape[1]
 
         if B is None:
-            if f.gradient.shape[1] is not None:
-                n = f.gradient.shape[1]
-            elif g.gradient.shape[1] is not None:
-                n = g.gradient.shape[1]
-            elif A is not None and A.shape[1] is not None:
-                n = A.shape[1]
-            elif c is not None:
-                n = len(c)
-            else:
-                raise ValueError("shape of B is undefined")
+            n = A.shape[0]
             B = _sp.linalg.LinearOperator((n, n), lambda x: -x, lambda x: -x)
         elif B.shape[1] is None:
             assert g.gradient.shape[1] is not None
