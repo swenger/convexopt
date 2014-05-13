@@ -8,7 +8,7 @@ import pylab as pl
 
 from convexopt.algorithms import APGM
 from convexopt.algorithms.util import ObjectiveLogger, ErrorLogger
-from convexopt.operators import L2Distance, GroupL1Norm
+from convexopt.operators import L2Distance, SliceSeparableNorm, L2Norm, GroupL1Norm
 
 def image_gradient_operator(h, w):
     """ 
@@ -44,6 +44,7 @@ def main():
     grad = image_gradient_operator(h, w)
 
     l1 = 0.1 * GroupL1Norm((2, h, w), 0)
+    #l1 = 0.1 * SliceSeparableNorm(L2Norm(), (2, h * w), 1)
     l2 = L2Distance(y_noisy)
     obj = lambda x: l1(grad * x) + l2(x)
     
