@@ -46,9 +46,9 @@ class SeparableNormGradient(Operator):
 class GroupSeparableNorm(SeparableNorm):
     def __init__(self, inner_ops, groups):
         super(GroupSeparableNorm, self).__init__()
-        self.groups = map(list, groups)
+        self.groups = list(map(list, groups))
         all_indices = sorted(sum(self.groups, []))
-        assert all_indices == range(len(all_indices)), "groups must be disjoint and complete"
+        assert all_indices == list(range(len(all_indices))), "groups must be disjoint and complete"
         self.shape = (1, len(all_indices))
         try:
             self.inner_ops = list(inner_ops)
@@ -83,11 +83,11 @@ class SliceSeparableNorm(SeparableNorm):
         s, a = self.input_shape, self.axis
         return _np.asarray(list(args)) \
             .reshape(*((s[a],) + s[:a] + s[a+1:])) \
-            .transpose(*(range(1, a + 1) + [0] + range(a + 1, len(s)))) \
+            .transpose(*(list(range(1, a + 1)) + [0] + list(range(a + 1, len(s))))) \
             .ravel()
 
     def decompose(self, arg):
         s, a = self.input_shape, self.axis
         arg = arg.reshape(s) \
-            .transpose(*([a] + range(0, a) + range(a + 1, len(s))))
+            .transpose(*([a] + list(range(0, a)) + list(range(a + 1, len(s)))))
         return arg.reshape(arg.shape[0], -1)

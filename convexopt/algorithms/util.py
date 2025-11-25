@@ -1,7 +1,7 @@
 """Utilities for algorithms
 """
 
-from inspect import getargspec as _getargspec
+from inspect import signature as _signature
 from warnings import warn as _warn
 
 import numpy as _np
@@ -13,17 +13,16 @@ class CallbackMeta(type):
     def __new__(cls, name, bases, dct):
         newcls = super(cls, CallbackMeta).__new__(cls, name, bases, dct)
         try:
-            argspec = _getargspec(dct["__init__"])
+            signature = _signature(dct["__init__"])
         except (KeyError, TypeError):
             pass
         else:
-            args = argspec.args[1:]
-            if argspec.varargs:
+            if any(x.kind == x.VAR_POSITIONAL for x in signature.parameters.values()):
                 _warn("varargs in %r" % cls)
-            if argspec.keywords:
+            if any(x.kind == x.VAR_KEYWORD for x in signature.parameters.values()):
                 _warn("keywords in %r" % cls)
 
-            for arg in args:
+            for arg in signature.parameters.keys():
                 if arg in cls.registry:
                     _warn("ambiguous constructor argument %r in %r"
                                   % (arg, cls))
@@ -32,15 +31,13 @@ class CallbackMeta(type):
         return newcls
 
 
-class Callback(object):
+class Callback(object, metaclass=CallbackMeta):
     """Base class for callback objects to determine algorithm convergence
     """
 
-    __metaclass__ = CallbackMeta
-
     @classmethod
     def get_callback_for_initparam(cls, key):
-        return cls.__metaclass__.registry[key]
+        return type(cls).registry[key]
 
     def __call__(self, alg):
         """Called from within `Algorithm.run` to determine convergence
@@ -150,9 +147,9 @@ class _ClassOrInstanceMethod(object):
     def __get__(self, obj, cls=None):
         from types import MethodType
         if obj is None:
-            return MethodType(self.func, cls, type(cls))
+            return MethodType(self.func, cls)
         else:
-            return MethodType(self.func, obj, cls)
+            return MethodType(self.func, obj)
 
 
 class Algorithm(object):
@@ -189,12 +186,12 @@ class Algorithm(object):
         self.stopping_reasons = set()
 
         delegates = {}
-        for key, value in kwargs.items():
+        for key, value in list(kwargs.items()):
             if isinstance(value, Logger):
                 setattr(self, key, value)
             else:
                 delegates.setdefault(Callback.get_callback_for_initparam(key), {})[key] = value
-        self.callbacks.update(k(**v) for k, v in delegates.items())
+        self.callbacks.update(k(**v) for k, v in list(delegates.items()))
 
     def step(self):
         """Compute an iteration step and store results in `self.x`

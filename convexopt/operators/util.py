@@ -1,7 +1,7 @@
 """Base classes and utilities for operators
 """
 
-from inspect import getargspec as _getargspec
+from inspect import signature as _signature
 
 import numpy as _np
 
@@ -160,13 +160,11 @@ class Operator(object):
 
     def __repr__(self):
         try:
-            arg = _getargspec(self.__init__)
+            signature = _signature(self.__init__)
         except TypeError:
-            argnames = ()
+            argnames = []
         else:
-            argnames = arg.args[1:]
-            if arg.varargs is not None:
-                argnames.append(arg.varargs)
+            argnames = list(signature.parameters.keys())
         return "%s(%s)" % (
             type(self).__name__,
             ", ".join("%s=%r" % (key, getattr(self, key))

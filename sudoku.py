@@ -14,7 +14,7 @@ from convexopt.operators import NonnegativeL1Norm, DataTerm
 class LinearIndexer(object):
     def __init__(self, shape):
         self.shape = shape
-        self.index = np.arange(np.product(shape)).reshape(shape)
+        self.index = np.arange(np.prod(shape)).reshape(shape)
         
     def __getitem__(self, key):
         return np.ravel(self.index[key])
@@ -65,7 +65,7 @@ def solve_sudoku(clues, maxiter=1000, epsilon=0.5, threshold=1e-6, l1weight=1e-2
         old_x = x
         x = fista(l2, l1 * tau, maxiter=maxiter)
         d = np.square(x - old_x).sum()
-        print d
+        print(d)
         if d < threshold:
             break
     x = x.reshape(9, 9, 9) # row, column, number -> probability
@@ -83,12 +83,12 @@ def check_sudoku(solution, clues=None):
     assert int(np.sqrt(n)) ** 2 == n, "size of sudoku must be a square number"
 
     for i, row in enumerate(solution, 1):
-        assert sorted(set(row)) == range(1, n + 1), "row %d is invalid" % i
+        assert sorted(set(row)) == list(range(1, n + 1)), "row %d is invalid" % i
     for i, col in enumerate(solution.T, 1):
-        assert sorted(set(col)) == range(1, n + 1), "column %d is invalid" % i
+        assert sorted(set(col)) == list(range(1, n + 1)), "column %d is invalid" % i
     for i in range(3):
         for j in range(3):
-            assert sorted(set(solution[3*i:3*i+3, 3*j:3*j+3].ravel())) == range(1, n + 1), "box %d-%d is invalid" % (i + 1, j + 1)
+            assert sorted(set(solution[3*i:3*i+3, 3*j:3*j+3].ravel())) == list(range(1, n + 1)), "box %d-%d is invalid" % (i + 1, j + 1)
 
 if __name__ == "__main__":
     clues = [
@@ -104,6 +104,6 @@ if __name__ == "__main__":
     ]
 
     solution = solve_sudoku(clues)
-    print solution
+    print(solution)
     check_sudoku(solution, clues)
 

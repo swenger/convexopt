@@ -27,17 +27,17 @@ if __name__ == "__main__":
     
     dr = DouglasRachford(l2, l1, gamma=0.1, maxiter=maxiter, objectives=ObjectiveLogger(l1 + l2), errors=ErrorLogger(x))
     dr.run()
-    print "reasons for stopping: " + ", ".join(message for cls, message in dr.stopping_reasons)
+    print("reasons for stopping: " + ", ".join(message for cls, message in dr.stopping_reasons))
     np.testing.assert_array_almost_equal(x, dr.x, decimal=3)
 
     apgm = APGM(l2, l1, rho=0.5, maxiter=maxiter, objectives=ObjectiveLogger(l1 + l2), errors=ErrorLogger(x))
     apgm.run()
-    print "reasons for stopping: " + ", ".join(message for cls, message in apgm.stopping_reasons)
+    print("reasons for stopping: " + ", ".join(message for cls, message in apgm.stopping_reasons))
     np.testing.assert_array_almost_equal(x, apgm.x, decimal=3)
     
     alg1 = ForwardBackward(l1, l2, maxiter=maxiter, objectives=ObjectiveLogger(l1 + l2), errors=ErrorLogger(x))
     alg1.run()
-    print "reasons for stopping: " + ", ".join(message for cls, message in alg1.stopping_reasons)
+    print("reasons for stopping: " + ", ".join(message for cls, message in alg1.stopping_reasons))
     np.testing.assert_array_almost_equal(x, alg1.x, decimal=3)
 
     xr = forward_backward(l1, l2, maxiter=maxiter)
@@ -45,27 +45,27 @@ if __name__ == "__main__":
 
     alg2 = ForwardBackward(l1, l2, maxiter=maxiter, alpha=0.9, objectives=ObjectiveLogger(l1 + l2), errors=ErrorLogger(x))
     alg2.run()
-    print "reasons for stopping: " + ", ".join(message for cls, message in alg2.stopping_reasons)
+    print("reasons for stopping: " + ", ".join(message for cls, message in alg2.stopping_reasons))
     np.testing.assert_array_almost_equal(x, alg2.x, decimal=3)
     
     alg3 = ForwardBackward(l1, l2, maxiter=maxiter, epsilon=1e-6, objectives=ObjectiveLogger(l1 + l2), errors=ErrorLogger(x))
     alg3.run()
-    print "reasons for stopping: " + ", ".join(message for cls, message in alg3.stopping_reasons)
+    print("reasons for stopping: " + ", ".join(message for cls, message in alg3.stopping_reasons))
     np.testing.assert_array_almost_equal(x, alg3.x, decimal=3)
         
     alg4 = FISTA(l2, l1, maxiter=maxiter, objectives=ObjectiveLogger(l1 + l2), errors=ErrorLogger(x))
     alg4.run()
-    print "reasons for stopping: " + ", ".join(message for cls, message in alg4.stopping_reasons)
+    print("reasons for stopping: " + ", ".join(message for cls, message in alg4.stopping_reasons))
     #np.testing.assert_array_almost_equal(x, alg4.x, decimal=3)
 
     admm1 = ADMM(l2, l1, rho=1.0, alpha=1.0, maxiter=maxiter, objectives=ObjectiveLogger(l1 + l2), errors=ErrorLogger(x))
     admm1.run()
-    print "reasons for stopping: " + ", ".join(message for cls, message in admm1.stopping_reasons)
+    print("reasons for stopping: " + ", ".join(message for cls, message in admm1.stopping_reasons))
     np.testing.assert_array_almost_equal(x, admm1.x, decimal=3)
 
     admm2 = ADMM(l2, l1, rho=0.5, alpha=1.8, maxiter=maxiter, objectives=ObjectiveLogger(l1 + l2), errors=ErrorLogger(x))
     admm2.run()
-    print "reasons for stopping: " + ", ".join(message for cls, message in admm2.stopping_reasons)
+    print("reasons for stopping: " + ", ".join(message for cls, message in admm2.stopping_reasons))
     np.testing.assert_array_almost_equal(x, admm2.x, decimal=3)
 
     # plot convergence

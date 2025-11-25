@@ -1,0 +1,11 @@
+[workspace]
+name = "convexopt"
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "linux-64", "linux-aarch64"]
+
+[dependencies]
+python = ">=3,<4"
+ipython = "*"
+numpy = "*"
+scipy = "*"
+matplotlib = "*"

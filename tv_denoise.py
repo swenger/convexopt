@@ -1,7 +1,6 @@
 import time
 
 import numpy as np
-from scipy.misc import lena
 import scipy.sparse as sp
 from scipy.sparse.linalg import aslinearoperator
 import pylab as pl
@@ -34,7 +33,7 @@ def image_gradient_operator(h, w):
 
 
 def main():
-    image = lena().astype(np.float) / 255.
+    image = pl.imread("lena.png").mean(axis=-1)
     h, w = image.shape
 
     y_true = image.ravel()
@@ -54,7 +53,7 @@ def main():
 
     t0 = time.time()
     y_denoised = algo.run()
-    print "took %.3f seconds" % (time.time() - t0)
+    print("took %.3f seconds" % (time.time() - t0))
 
     pl.figure()
     pl.gray()
